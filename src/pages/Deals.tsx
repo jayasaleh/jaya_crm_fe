@@ -178,6 +178,11 @@ const Deals = () => {
             Below standard price
           </Badge>
         )}
+        {deal.activatedAt && (
+          <Badge variant="outline" className="text-xs w-full justify-center bg-green-50 text-green-700 border-green-200">
+            ✓ Activated
+          </Badge>
+        )}
         <div className="flex gap-2 pt-2">
           {deal.status === DEAL_STATUS.DRAFT && (
             <Button
@@ -223,7 +228,7 @@ const Deals = () => {
               </Button>
             </>
           )}
-          {deal.status === DEAL_STATUS.APPROVED && (
+          {deal.status === DEAL_STATUS.APPROVED && !deal.activatedAt && (
             <Button
               size="sm"
               variant="outline"

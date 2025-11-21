@@ -24,6 +24,7 @@ export interface Deal {
   ownerId: number;
   customerId: number;
   leadId?: number;
+  activatedAt?: string;
   customer: {
     name: string;
     customerCode: string;
