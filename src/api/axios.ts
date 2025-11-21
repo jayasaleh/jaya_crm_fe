@@ -36,6 +36,10 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => {
+    // For blob responses (file downloads), return the blob directly
+    if (response.config.responseType === 'blob') {
+      return response.data;
+    }
     // Backend response format: { code, status, message, data }
     return response.data;
   },
@@ -86,6 +90,28 @@ api.interceptors.response.use(
     }
 
     // Handle other errors
+    // For blob responses, try to parse error message from blob
+    if (originalRequest.responseType === 'blob' && error.response?.data instanceof Blob) {
+      try {
+        const text = await error.response.data.text();
+        const json = JSON.parse(text);
+        const message = json?.message || json?.error || 'Failed to download file';
+        toast.error(message);
+        return Promise.reject(new Error(message));
+      } catch (parseError) {
+        // If parsing fails, check status code for error message
+        const status = error.response?.status;
+        const statusText = error.response?.statusText;
+        const message = status === 400 
+          ? 'Invalid date range. Please select both start and end dates.'
+          : status === 500
+          ? 'Server error. Please try again later.'
+          : `Failed to download file${statusText ? `: ${statusText}` : ''}`;
+        toast.error(message);
+        return Promise.reject(new Error(message));
+      }
+    }
+    
     const errorMessage = (error as AxiosError)?.response?.data as any;
     const message = errorMessage?.message || errorMessage?.error || 'An error occurred';
     
