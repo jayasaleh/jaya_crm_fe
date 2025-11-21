@@ -50,6 +50,9 @@ export const STATUS_COLORS = {
   [DEAL_STATUS.WAITING_APPROVAL]: 'bg-yellow-100 text-yellow-800',
   [DEAL_STATUS.APPROVED]: 'bg-green-100 text-green-800',
   [DEAL_STATUS.REJECTED]: 'bg-red-100 text-red-800',
+  [SERVICE_STATUS.ACTIVE]: 'bg-green-100 text-green-800',
+  [SERVICE_STATUS.INACTIVE]: 'bg-gray-100 text-gray-800',
+  [SERVICE_STATUS.SUSPENDED]: 'bg-orange-100 text-orange-800',
 } as const;
 
 // Pagination defaults
