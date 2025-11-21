@@ -16,6 +16,13 @@ export function formatCurrency(amount: number): string {
 }
 
 /**
+ * Alias for formatCurrency (formatRupiah)
+ */
+export function formatRupiah(amount: number): string {
+  return formatCurrency(amount);
+}
+
+/**
  * Format date to readable string
  */
 export function formatDate(date: string | Date): string {
