@@ -55,6 +55,7 @@ const Deals = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [actionType, setActionType] = useState<"approve" | "reject" | "submit" | "activate" | null>(null);
+  const [actionNote, setActionNote] = useState("");
   const [statusFilter, setStatusFilter] = useState<typeof DEAL_STATUS[keyof typeof DEAL_STATUS] | "ALL">("ALL");
 
   const { deals, isLoading } = useDeals(
@@ -118,14 +119,21 @@ const Deals = () => {
       if (actionType === "submit") {
         await submitMutation.mutateAsync(selectedDeal.id);
       } else if (actionType === "approve") {
-        await approveMutation.mutateAsync({ id: selectedDeal.id });
+        await approveMutation.mutateAsync({ 
+          id: selectedDeal.id, 
+          data: actionNote ? { note: actionNote } : undefined 
+        });
       } else if (actionType === "reject") {
-        await rejectMutation.mutateAsync({ id: selectedDeal.id });
+        await rejectMutation.mutateAsync({ 
+          id: selectedDeal.id, 
+          data: actionNote ? { note: actionNote } : undefined 
+        });
       } else if (actionType === "activate") {
         await activateMutation.mutateAsync(selectedDeal.id);
       }
       setSelectedDeal(null);
       setActionType(null);
+      setActionNote("");
     } catch (error) {
       // Error handled by mutation
     }
@@ -194,6 +202,7 @@ const Deals = () => {
                 onClick={() => {
                   setSelectedDeal(deal);
                   setActionType("approve");
+                  setActionNote("");
                 }}
               >
                 <Check className="h-3 w-3 mr-1" />
@@ -206,6 +215,7 @@ const Deals = () => {
                 onClick={() => {
                   setSelectedDeal(deal);
                   setActionType("reject");
+                  setActionNote("");
                 }}
               >
                 <X className="h-3 w-3 mr-1" />
@@ -451,6 +461,7 @@ const Deals = () => {
           if (!open) {
             setSelectedDeal(null);
             setActionType(null);
+            setActionNote("");
           }
         }}
       >
@@ -473,6 +484,18 @@ const Deals = () => {
                 "This will create active services for the customer. Are you sure?"}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {(actionType === "approve" || actionType === "reject") && (
+            <div className="space-y-2 py-4">
+              <Label htmlFor="note">Note (Optional)</Label>
+              <Textarea
+                id="note"
+                placeholder="Add a note for this action..."
+                value={actionNote}
+                onChange={(e) => setActionNote(e.target.value)}
+                rows={3}
+              />
+            </div>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
