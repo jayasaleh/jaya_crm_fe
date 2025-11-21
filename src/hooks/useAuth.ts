@@ -3,12 +3,14 @@
  * React hook for managing authentication state and operations
  */
 
+import React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { authService } from '../services/auth.service';
 import { storage } from '../utils/storage';
 import { LoginRequest, User } from '../types/auth.types';
+import { useAuthStore } from '../store/authStore';
 
 const AUTH_QUERY_KEY = ['auth'] as const;
 
@@ -18,19 +20,18 @@ const AUTH_QUERY_KEY = ['auth'] as const;
 export function useAuth() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-
-  // Get current user from storage
-  const user = storage.getUser() as User | null;
-  const isAuthenticated = !!user;
+  const { user, isAuthenticated, setUser, clearAuth } = useAuthStore();
 
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: (credentials: LoginRequest) => authService.login(credentials),
     onSuccess: (data) => {
-      // Save tokens and user to storage
+      // Save tokens to storage
       storage.setAccessToken(data.accessToken);
       storage.setRefreshToken(data.refreshToken);
-      storage.setUser(data.user);
+      
+      // Update global state
+      setUser(data.user);
 
       // Update query cache
       queryClient.setQueryData(AUTH_QUERY_KEY, data.user);
@@ -49,8 +50,8 @@ export function useAuth() {
 
   // Logout function
   const logout = () => {
-    // Clear storage
-    storage.clear();
+    // Clear global state
+    clearAuth();
 
     // Clear query cache
     queryClient.clear();
