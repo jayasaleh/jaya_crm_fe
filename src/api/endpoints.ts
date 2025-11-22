@@ -57,6 +57,10 @@ export const API_ENDPOINTS = {
   REPORTS: {
     SALES: `${API_BASE}/reports/sales`,
     SALES_EXCEL: `${API_BASE}/reports/sales.xlsx`,
+    LEADS: `${API_BASE}/reports/leads`,
+    LEADS_EXCEL: `${API_BASE}/reports/leads.xlsx`,
+    CUSTOMERS: `${API_BASE}/reports/customers`,
+    CUSTOMERS_EXCEL: `${API_BASE}/reports/customers.xlsx`,
   },
 } as const;
 

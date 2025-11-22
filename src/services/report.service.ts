@@ -1,7 +1,7 @@
 import api from '../api/axios';
 import { API_ENDPOINTS } from '../api/endpoints';
 import { ApiResponse } from '../types/api.types';
-import { SalesReport, ReportFilters } from '../types/report.types';
+import { SalesReport, LeadReport, CustomerReport, ReportFilters } from '../types/report.types';
 
 export const reportService = {
   getSalesReport: async (filters?: ReportFilters): Promise<SalesReport> => {
@@ -64,6 +64,110 @@ export const reportService = {
       throw new Error('Invalid response format from server');
     } catch (error: any) {
       // Re-throw with more context
+      if (error.message) {
+        throw error;
+      }
+      throw new Error('Failed to download Excel report');
+    }
+  },
+
+  getLeadsReport: async (filters?: ReportFilters): Promise<LeadReport> => {
+    const params: any = {};
+    if (filters?.startDate) params.startDate = filters.startDate;
+    if (filters?.endDate) params.endDate = filters.endDate;
+
+    const response = await api.get<ApiResponse<LeadReport>>(
+      API_ENDPOINTS.REPORTS.LEADS,
+      { params }
+    );
+    
+    const reportData = (response as any).data;
+    if (reportData && reportData.period && reportData.summary) {
+      return reportData as LeadReport;
+    }
+    
+    throw new Error('No data received from server');
+  },
+
+  getCustomersReport: async (filters?: ReportFilters): Promise<CustomerReport> => {
+    const params: any = {};
+    if (filters?.startDate) params.startDate = filters.startDate;
+    if (filters?.endDate) params.endDate = filters.endDate;
+
+    const response = await api.get<ApiResponse<CustomerReport>>(
+      API_ENDPOINTS.REPORTS.CUSTOMERS,
+      { params }
+    );
+    
+    const reportData = (response as any).data;
+    if (reportData && reportData.period && reportData.summary) {
+      return reportData as CustomerReport;
+    }
+    
+    throw new Error('No data received from server');
+  },
+
+  downloadLeadsReportExcel: async (filters: ReportFilters): Promise<Blob> => {
+    if (!filters.startDate || !filters.endDate) {
+      throw new Error('Start date and end date are required for Excel export');
+    }
+
+    try {
+      const response = await api.get(
+        API_ENDPOINTS.REPORTS.LEADS_EXCEL,
+        {
+          params: {
+            startDate: filters.startDate,
+            endDate: filters.endDate,
+          },
+          responseType: 'blob',
+        }
+      );
+      
+      if (!response) {
+        throw new Error('No response from server');
+      }
+      
+      if (response instanceof Blob) {
+        return response;
+      }
+      
+      throw new Error('Invalid response format from server');
+    } catch (error: any) {
+      if (error.message) {
+        throw error;
+      }
+      throw new Error('Failed to download Excel report');
+    }
+  },
+
+  downloadCustomersReportExcel: async (filters: ReportFilters): Promise<Blob> => {
+    if (!filters.startDate || !filters.endDate) {
+      throw new Error('Start date and end date are required for Excel export');
+    }
+
+    try {
+      const response = await api.get(
+        API_ENDPOINTS.REPORTS.CUSTOMERS_EXCEL,
+        {
+          params: {
+            startDate: filters.startDate,
+            endDate: filters.endDate,
+          },
+          responseType: 'blob',
+        }
+      );
+      
+      if (!response) {
+        throw new Error('No response from server');
+      }
+      
+      if (response instanceof Blob) {
+        return response;
+      }
+      
+      throw new Error('Invalid response format from server');
+    } catch (error: any) {
       if (error.message) {
         throw error;
       }
