@@ -34,7 +34,7 @@ const createLeadSchema = z.object({
   address: z.string().min(3, "Address is required"),
   needs: z.string().min(3, "Needs is required"),
   source: z.enum(["WEBSITE", "WALKIN", "PARTNER", "REFERRAL", "OTHER"]),
-  status: z.enum(["NEW", "CONTACTED", "QUALIFIED", "CONVERTED", "LOST"]).optional(),
+  status: z.enum(["NEW", "CONTACTED", "QUALIFIED", "LOST"]).optional(),
 });
 
 type CreateLeadForm = z.infer<typeof createLeadSchema>;
@@ -216,11 +216,13 @@ const Leads = () => {
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(LEAD_STATUS).map(([key, value]) => (
-                        <SelectItem key={key} value={value}>
-                          {value}
-                        </SelectItem>
-                      ))}
+                      {Object.entries(LEAD_STATUS)
+                        .filter(([key, value]) => value !== LEAD_STATUS.CONVERTED)
+                        .map(([key, value]) => (
+                          <SelectItem key={key} value={value}>
+                            {value}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -258,11 +260,13 @@ const Leads = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ALL">All Status</SelectItem>
-                  {Object.entries(LEAD_STATUS).map(([key, value]) => (
-                    <SelectItem key={key} value={value}>
-                      {value}
-                    </SelectItem>
-                  ))}
+                  {Object.entries(LEAD_STATUS)
+                    .filter(([key, value]) => value !== LEAD_STATUS.CONVERTED)
+                    .map(([key, value]) => (
+                      <SelectItem key={key} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
               <Select value={sourceFilter || "ALL"} onValueChange={(value) => {

@@ -5,10 +5,13 @@ import toast from 'react-hot-toast';
 import { PAGINATION } from '../utils/constants';
 
 const DEALS_QUERY_KEY = ['deals'] as const;
+const LEADS_QUERY_KEY = ['leads'] as const;
+const DASHBOARD_QUERY_KEY = ['dashboard'] as const;
+const CUSTOMERS_QUERY_KEY = ['customers'] as const;
 
 export function useDeals(filters?: DealFilters) {
   const { data, isLoading, error } = useQuery({
-    queryKey: [DEALS_QUERY_KEY, filters],
+    queryKey: [...DEALS_QUERY_KEY, filters],
     queryFn: () => dealService.getAll(filters),
     placeholderData: (previousData) => previousData,
   });
@@ -40,12 +43,26 @@ export function useDeal(id: number) {
   };
 }
 
+/**
+ * Invalidate all related queries after deal mutation
+ */
+function invalidateRelatedQueries(queryClient: ReturnType<typeof useQueryClient>) {
+  // Invalidate deals queries (all filters)
+  queryClient.invalidateQueries({ queryKey: DEALS_QUERY_KEY });
+  // Invalidate leads queries (because lead status might change)
+  queryClient.invalidateQueries({ queryKey: LEADS_QUERY_KEY });
+  // Invalidate dashboard stats (because stats change)
+  queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
+  // Invalidate customers queries (because new customer might be created or services activated)
+  queryClient.invalidateQueries({ queryKey: CUSTOMERS_QUERY_KEY });
+}
+
 export function useCreateDeal() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateDealRequest) => dealService.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: DEALS_QUERY_KEY });
+      invalidateRelatedQueries(queryClient);
       toast.success('Deal created successfully!');
     },
     onError: (error: any) => {
@@ -59,7 +76,7 @@ export function useSubmitDeal() {
   return useMutation({
     mutationFn: (id: number) => dealService.submit(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: DEALS_QUERY_KEY });
+      invalidateRelatedQueries(queryClient);
       toast.success('Deal submitted for approval!');
     },
     onError: (error: any) => {
@@ -74,7 +91,7 @@ export function useApproveDeal() {
     mutationFn: ({ id, data }: { id: number; data?: ApprovalActionRequest }) =>
       dealService.approve(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: DEALS_QUERY_KEY });
+      invalidateRelatedQueries(queryClient);
       toast.success('Deal approved successfully!');
     },
     onError: (error: any) => {
@@ -89,7 +106,7 @@ export function useRejectDeal() {
     mutationFn: ({ id, data }: { id: number; data?: ApprovalActionRequest }) =>
       dealService.reject(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: DEALS_QUERY_KEY });
+      invalidateRelatedQueries(queryClient);
       toast.success('Deal rejected.');
     },
     onError: (error: any) => {
@@ -103,7 +120,7 @@ export function useActivateDeal() {
   return useMutation({
     mutationFn: (id: number) => dealService.activate(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: DEALS_QUERY_KEY });
+      invalidateRelatedQueries(queryClient);
       toast.success('Deal services activated successfully!');
     },
     onError: (error: any) => {
