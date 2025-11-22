@@ -1,18 +1,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead } from "@/hooks/useLeads";
 import { LEAD_STATUS, LEAD_SOURCE, STATUS_COLORS } from "@/utils/constants";
 import { formatDate } from "@/utils/formatters";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,21 +16,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-
-const createLeadSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  contact: z.string().min(5, "Contact is required"),
-  email: z.string().email("Invalid email").optional().or(z.literal("")),
-  address: z.string().min(3, "Address is required"),
-  needs: z.string().min(3, "Needs is required"),
-  source: z.enum(["WEBSITE", "WALKIN", "PARTNER", "REFERRAL", "OTHER"]),
-  status: z.enum(["NEW", "CONTACTED", "QUALIFIED", "LOST"]).optional(),
-});
-
-type CreateLeadForm = z.infer<typeof createLeadSchema>;
+import { LeadForm, LeadFormValues } from "@/components/forms/LeadForm";
+import { DataTable } from "@/components/common/DataTable";
+import { Pagination } from "@/components/common/Pagination";
+import { SearchAndFilter } from "@/components/common/SearchAndFilter";
+import { Lead, LeadSource, LeadStatus } from "@/types/lead.types";
 
 const Leads = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -45,13 +28,13 @@ const Leads = () => {
   const [sourceFilter, setSourceFilter] = useState<string>("");
   const [page, setPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingLead, setEditingLead] = useState<number | null>(null);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [deleteLeadId, setDeleteLeadId] = useState<number | null>(null);
 
   const { data, isLoading } = useLeads({
     search: searchTerm || undefined,
-    status: statusFilter || undefined,
-    source: sourceFilter || undefined,
+    status: statusFilter ? (statusFilter as LeadStatus) : undefined,
+    source: sourceFilter ? (sourceFilter as LeadSource) : undefined,
     page,
     limit: 10,
   });
@@ -60,72 +43,52 @@ const Leads = () => {
   const updateMutation = useUpdateLead();
   const deleteMutation = useDeleteLead();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-    setValue,
-  } = useForm<CreateLeadForm>({
-    resolver: zodResolver(createLeadSchema),
-    defaultValues: {
-      source: "OTHER",
-      status: "NEW",
-    },
-  });
+  const leads = data?.data || [];
+  const pagination = data?.pagination;
 
-  const onSubmit = (data: CreateLeadForm) => {
+  const handleSubmit = (formData: LeadFormValues) => {
     if (editingLead) {
       updateMutation.mutate(
         {
-          id: editingLead,
+          id: editingLead.id,
           data: {
-            name: data.name,
-            contact: data.contact,
-            email: data.email || undefined,
-            address: data.address,
-            needs: data.needs,
-            source: data.source,
-            status: data.status,
+            name: formData.name,
+            contact: formData.contact,
+            email: formData.email || undefined,
+            address: formData.address,
+            needs: formData.needs,
+            source: formData.source,
+            status: formData.status,
           },
         },
         {
           onSuccess: () => {
             setIsDialogOpen(false);
             setEditingLead(null);
-            reset();
           },
         }
       );
     } else {
       createMutation.mutate(
         {
-          name: data.name,
-          contact: data.contact,
-          email: data.email || undefined,
-          address: data.address,
-          needs: data.needs,
-          source: data.source,
+          name: formData.name,
+          contact: formData.contact,
+          email: formData.email || undefined,
+          address: formData.address,
+          needs: formData.needs,
+          source: formData.source,
         },
         {
           onSuccess: () => {
             setIsDialogOpen(false);
-            reset();
           },
         }
       );
     }
   };
 
-  const handleEdit = (lead: any) => {
-    setEditingLead(lead.id);
-    setValue("name", lead.name);
-    setValue("contact", lead.contact);
-    setValue("email", lead.email || "");
-    setValue("address", lead.address || "");
-    setValue("needs", lead.needs || "");
-    setValue("source", lead.source);
-    setValue("status", lead.status);
+  const handleEdit = (lead: Lead) => {
+    setEditingLead(lead);
     setIsDialogOpen(true);
   };
 
@@ -139,8 +102,107 @@ const Leads = () => {
     }
   };
 
-  const leads = data?.data || [];
-  const pagination = data?.pagination;
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setPage(1);
+  };
+
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value);
+    setPage(1);
+  };
+
+  const handleSourceFilterChange = (value: string) => {
+    setSourceFilter(value);
+    setPage(1);
+  };
+
+  const columns = [
+    {
+      key: "name",
+      header: "Name",
+      render: (lead: Lead) => <span className="font-medium">{lead.name}</span>,
+    },
+    {
+      key: "contact",
+      header: "Contact",
+    },
+    {
+      key: "email",
+      header: "Email",
+      render: (lead: Lead) => lead.email || "-",
+    },
+    {
+      key: "address",
+      header: "Address",
+      render: (lead: Lead) => lead.address || "-",
+    },
+    {
+      key: "needs",
+      header: "Needs",
+      render: (lead: Lead) => lead.needs || "-",
+    },
+    {
+      key: "source",
+      header: "Source",
+      render: (lead: Lead) => <Badge variant="outline">{lead.source}</Badge>,
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (lead: Lead) => (
+        <Badge
+          className={
+            STATUS_COLORS[lead.status as keyof typeof STATUS_COLORS] ||
+            "bg-gray-100 text-gray-800"
+          }
+        >
+          {lead.status}
+        </Badge>
+      ),
+    },
+    {
+      key: "createdAt",
+      header: "Created",
+      render: (lead: Lead) => (
+        <span className="text-sm text-muted-foreground">
+          {formatDate(lead.createdAt)}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      className: "text-right",
+      render: (lead: Lead) => (
+        <div className="flex justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleEdit(lead)}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setDeleteLeadId(lead.id)}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const statusOptions = Object.entries(LEAD_STATUS)
+    .filter(([_, value]) => value !== LEAD_STATUS.CONVERTED)
+    .map(([_, value]) => ({ value, label: value }));
+
+  const sourceOptions = Object.entries(LEAD_SOURCE).map(([_, value]) => ({
+    value,
+    label: value,
+  }));
 
   return (
     <div className="space-y-6">
@@ -149,244 +211,72 @@ const Leads = () => {
           <h1 className="text-3xl font-bold">Leads Management</h1>
           <p className="text-muted-foreground">Manage your potential customers</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) {
-            setEditingLead(null);
-            reset();
-          }
+        <Button onClick={() => {
+          setEditingLead(null);
+          setIsDialogOpen(true);
         }}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Lead
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingLead ? "Edit Lead" : "Add New Lead"}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Name *</Label>
-                <Input placeholder="Enter name" {...register("name")} />
-                {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label>Contact *</Label>
-                <Input placeholder="Phone number" {...register("contact")} />
-                {errors.contact && <p className="text-sm text-red-500">{errors.contact.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input type="email" placeholder="email@example.com" {...register("email")} />
-                {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label>Address *</Label>
-                <Textarea placeholder="Full address" {...register("address")} />
-                {errors.address && <p className="text-sm text-red-500">{errors.address.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label>Needs *</Label>
-                <Input placeholder="e.g., 100 Mbps internet" {...register("needs")} />
-                {errors.needs && <p className="text-sm text-red-500">{errors.needs.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label>Source *</Label>
-                <Select onValueChange={(value) => setValue("source", value as any)} defaultValue="OTHER">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select source" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(LEAD_SOURCE).map(([key, value]) => (
-                      <SelectItem key={key} value={value}>
-                        {value}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.source && <p className="text-sm text-red-500">{errors.source.message}</p>}
-              </div>
-              {editingLead && (
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select onValueChange={(value) => setValue("status", value as any)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(LEAD_STATUS)
-                        .filter(([key, value]) => value !== LEAD_STATUS.CONVERTED)
-                        .map(([key, value]) => (
-                          <SelectItem key={key} value={value}>
-                            {value}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <Button type="submit" className="w-full" disabled={createMutation.isPending || updateMutation.isPending}>
-                {createMutation.isPending || updateMutation.isPending ? "Saving..." : "Save Lead"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Lead
+        </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex items-center gap-2 flex-1">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name, contact, email, address..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setPage(1);
-                }}
-                className="max-w-sm"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Select value={statusFilter || "ALL"} onValueChange={(value) => {
-                setStatusFilter(value === "ALL" ? "" : value);
-                setPage(1);
-              }}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All Status</SelectItem>
-                  {Object.entries(LEAD_STATUS)
-                    .filter(([key, value]) => value !== LEAD_STATUS.CONVERTED)
-                    .map(([key, value]) => (
-                      <SelectItem key={key} value={value}>
-                        {value}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              <Select value={sourceFilter || "ALL"} onValueChange={(value) => {
-                setSourceFilter(value === "ALL" ? "" : value);
-                setPage(1);
-              }}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by source" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ALL">All Source</SelectItem>
-                  {Object.entries(LEAD_SOURCE).map(([key, value]) => (
-                    <SelectItem key={key} value={value}>
-                      {value}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          <SearchAndFilter
+            searchValue={searchTerm}
+            onSearchChange={handleSearchChange}
+            searchPlaceholder="Search by name, contact, email, address..."
+            filters={[
+              {
+                key: "status",
+                value: statusFilter,
+                options: statusOptions,
+                placeholder: "Status",
+                onChange: handleStatusFilterChange,
+              },
+              {
+                key: "source",
+                value: sourceFilter,
+                options: sourceOptions,
+                placeholder: "Source",
+                onChange: handleSourceFilterChange,
+              },
+            ]}
+          />
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : leads.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No leads found
-            </div>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Contact</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Address</TableHead>
-                      <TableHead>Needs</TableHead>
-                      <TableHead>Source</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {leads.map((lead) => (
-                      <TableRow key={lead.id}>
-                        <TableCell className="font-medium">{lead.name}</TableCell>
-                        <TableCell>{lead.contact}</TableCell>
-                        <TableCell>{lead.email || "-"}</TableCell>
-                        <TableCell>{lead.address || "-"}</TableCell>
-                        <TableCell>{lead.needs || "-"}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{lead.source}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={STATUS_COLORS[lead.status as keyof typeof STATUS_COLORS] || "bg-gray-100 text-gray-800"}>
-                            {lead.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatDate(lead.createdAt)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(lead)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setDeleteLeadId(lead.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              {pagination && pagination.totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <div className="text-sm text-muted-foreground">
-                    Showing {((pagination.page - 1) * pagination.limit) + 1} to{" "}
-                    {Math.min(pagination.page * pagination.limit, pagination.total)} of{" "}
-                    {pagination.total} leads
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={pagination.page === 1}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
-                      disabled={pagination.page === pagination.totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </>
+          <DataTable
+            data={leads}
+            columns={columns}
+            isLoading={isLoading}
+            emptyMessage="No leads found"
+            keyExtractor={(lead) => lead.id}
+          />
+          {pagination && (
+            <Pagination
+              page={pagination.page}
+              totalPages={pagination.totalPages}
+              total={pagination.total}
+              limit={pagination.limit}
+              onPageChange={setPage}
+              className="mt-4"
+            />
           )}
         </CardContent>
       </Card>
 
-      <AlertDialog open={!!deleteLeadId} onOpenChange={(open) => !open && setDeleteLeadId(null)}>
+      <LeadForm
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onSubmit={handleSubmit}
+        editingLead={editingLead}
+        isLoading={createMutation.isPending || updateMutation.isPending}
+      />
+
+      <AlertDialog
+        open={!!deleteLeadId}
+        onOpenChange={(open) => !open && setDeleteLeadId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
@@ -396,7 +286,10 @@ const Leads = () => {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

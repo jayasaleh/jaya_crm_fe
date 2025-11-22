@@ -6,6 +6,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { leadService } from '../services/lead.service';
 import { Lead, CreateLeadRequest, UpdateLeadRequest, LeadFilters } from '../types/lead.types';
+import { getErrorMessage } from '../utils/errorHandler';
 import toast from 'react-hot-toast';
 
 const LEADS_QUERY_KEY = ['leads'] as const;
@@ -44,9 +45,8 @@ export function useCreateLead() {
       queryClient.invalidateQueries({ queryKey: LEADS_QUERY_KEY });
       toast.success('Lead created successfully');
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || 'Failed to create lead';
-      toast.error(message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 }
@@ -64,9 +64,8 @@ export function useUpdateLead() {
       queryClient.invalidateQueries({ queryKey: LEADS_QUERY_KEY });
       toast.success('Lead updated successfully');
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || 'Failed to update lead';
-      toast.error(message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 }
@@ -83,9 +82,8 @@ export function useDeleteLead() {
       queryClient.invalidateQueries({ queryKey: LEADS_QUERY_KEY });
       toast.success('Lead deleted successfully');
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || 'Failed to delete lead';
-      toast.error(message);
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error));
     },
   });
 }

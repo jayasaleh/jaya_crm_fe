@@ -3,18 +3,8 @@ import { Toaster } from "react-hot-toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Layout } from "./components/Layout";
-import { ProtectedRoute } from "./components/ProtectedRoute";
 import { useAuthStore } from "./store/authStore";
-import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import Leads from "./pages/Leads";
-import Products from "./pages/Products";
-import Deals from "./pages/Deals";
-import Customers from "./pages/Customers";
-import Reports from "./pages/Reports";
-import NotFound from "./pages/NotFound";
+import { routes } from "./config/routes";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,104 +23,44 @@ const App = () => {
   }, [initializeAuth]);
 
   return (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 3000,
-          style: {
-            background: '#fff',
-            color: '#363636',
-            borderRadius: '8px',
-            padding: '16px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-          },
-          success: {
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster
+          position="top-right"
+          toastOptions={{
             duration: 3000,
-            iconTheme: {
-              primary: '#10b981',
-              secondary: '#fff',
+            style: {
+              background: '#fff',
+              color: '#363636',
+              borderRadius: '8px',
+              padding: '16px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
             },
-          },
-          error: {
-            duration: 4000,
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: '#fff',
+            success: {
+              duration: 3000,
+              iconTheme: {
+                primary: '#10b981',
+                secondary: '#fff',
+              },
             },
-          },
-        }}
-      />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Dashboard />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/leads"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Leads />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/products"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Products />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/deals"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Deals />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/customers"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Customers />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/reports"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Reports />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+            error: {
+              duration: 4000,
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
+        <BrowserRouter>
+          <Routes>
+            {routes.map((route) => (
+              <Route key={route.path} path={route.path} element={route.element} />
+            ))}
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 };
 
